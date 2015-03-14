@@ -156,6 +156,16 @@ endif
 CUDA_LIB_DIR += $(CUDA_DIR)/lib
 
 INCLUDE_DIRS += $(BUILD_INCLUDE_DIR) ./src ./include
+INCLUDE_DIRS += /opt/glog/include/ /home/rgirdhar/Software/utils/gflags/install/include/
+INCLUDE_DIRS += /opt/atlas/st/include/ /opt/atlas/mt/include
+INCLUDE_DIRS += /home/xiaolonw/leveldb/include/ /home/xiaolonw/mdb/libraries/liblmdb
+INCLUDE_DIRS += /home/xiaolonw/opencv/include/
+
+LIBRARY_DIRS += /opt/glog/lib/ /home/rgirdhar/Software/utils/gflags/install/lib/
+LIBRARY_DIRS += /home/xiaolonw/leveldb/ /home/xiaolonw/mdb/libraries/liblmdb
+LIBRARY_DIRS += /home/xiaolonw/opencv/lib/
+LIBRARY_DIRS += /opt/atlas/st/lib/ /opt/atlas/mt/lib/
+
 ifneq ($(CPU_ONLY), 1)
 	INCLUDE_DIRS += $(CUDA_INCLUDE_DIR)
 	LIBRARY_DIRS += $(CUDA_LIB_DIR)
@@ -224,7 +234,7 @@ ifeq ($(LINUX), 1)
 	endif
 	# boost::thread is reasonably called boost_thread (compare OS X)
 	# We will also explicitly add stdc++ to the link target.
-	LIBRARIES += boost_thread stdc++
+	LIBRARIES += boost_thread-mt stdc++
 endif
 
 # OS X:
