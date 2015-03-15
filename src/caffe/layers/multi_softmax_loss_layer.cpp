@@ -17,10 +17,11 @@ template<typename Dtype>
 void MultiSoftmaxWithLossLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 		const vector<Blob<Dtype>*>& top)
 {
+  LossLayer<Dtype>::LayerSetUp(bottom, top);
 	CHECK_EQ(bottom.size(), 2) << "Multi SoftmaxLoss Layer takes two blobs as input.";
-	CHECK_EQ(top.size(), 0) << "Multi SoftmaxLoss Layer takes no blob as output.";
 	softmax_bottom_vec_.clear();
 	softmax_bottom_vec_.push_back(bottom[0]);
+  softmax_top_vec_.clear();
 	softmax_top_vec_.push_back(&prob_);
 	softmax_layer_->LayerSetUp(softmax_bottom_vec_, softmax_top_vec_);
 }
@@ -28,6 +29,8 @@ void MultiSoftmaxWithLossLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bo
 template <typename Dtype>
 void MultiSoftmaxWithLossLayer<Dtype>::Reshape(
   const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+  LossLayer<Dtype>::Reshape(bottom, top);
+	softmax_layer_->Reshape(softmax_bottom_vec_, softmax_top_vec_);
   diff_.ReshapeLike(*bottom[0]);
 }
 
@@ -38,15 +41,16 @@ void MultiSoftmaxWithLossLayer<Dtype>::Forward_cpu(
 	// The forward pass computes the softmax prob values.
 	softmax_bottom_vec_[0] = bottom[0];
 	softmax_layer_->Forward_cpu(softmax_bottom_vec_, softmax_top_vec_);
-	const Dtype* prob_data = prob_.cpu_data();
+  const Dtype* prob_data = prob_.cpu_data();
 	const Dtype* label = bottom[1]->cpu_data();
 	int num = prob_.num();
 	int dim = prob_.count() / num;
-	int dimClass = bottom[0]->channels();
+	//int dimClass = bottom[0]->channels();
 	int height = bottom[0]->height();
 	int width  = bottom[0]->width();
 	int imgSize = height * width;
 	Dtype loss = 0;
+   
 	for (int i = 0; i < num; ++i)
 	{
 		for(int j = 0; j < imgSize; j ++)

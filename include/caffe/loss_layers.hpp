@@ -784,10 +784,10 @@ class MultiSoftmaxLayer : public Layer<Dtype> {
 
 //added by wxl/rg
 template <typename Dtype>
-class MultiSoftmaxWithLossLayer : public Layer<Dtype> {
+class MultiSoftmaxWithLossLayer : public LossLayer<Dtype> {
  public:
   explicit MultiSoftmaxWithLossLayer(const LayerParameter& param)
-      : Layer<Dtype>(param), softmax_layer_(new MultiSoftmaxLayer<Dtype>(param)) {}
+      : LossLayer<Dtype>(param), softmax_layer_(new MultiSoftmaxLayer<Dtype>(param)), diff_() {}
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
