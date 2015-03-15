@@ -90,6 +90,7 @@ void ReshapeLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
             }
       }
     }
+    top[0]->mutable_cpu_data()[0] = 0;
 }
 
 template <typename Dtype>

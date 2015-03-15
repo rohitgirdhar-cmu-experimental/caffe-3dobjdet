@@ -758,6 +758,62 @@ class SoftmaxWithLossLayer : public LossLayer<Dtype> {
   int softmax_axis_, outer_num_, inner_num_;
 };
 
+//added by wxl/rg
+template <typename Dtype>
+class MultiSoftmaxLayer : public Layer<Dtype> {
+ public:
+  explicit MultiSoftmaxLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual inline const char* type() const { return "MultiSoftmax"; }
+
+ //protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+
+  // sum_multiplier is just used to carry out sum using blas
+  Blob<Dtype> sum_multiplier_;
+  // scale is an intermediate blob to hold temporary results.
+  Blob<Dtype> scale_;
+};
+
+//added by wxl/rg
+template <typename Dtype>
+class MultiSoftmaxWithLossLayer : public Layer<Dtype> {
+ public:
+  explicit MultiSoftmaxWithLossLayer(const LayerParameter& param)
+      : Layer<Dtype>(param), softmax_layer_(new MultiSoftmaxLayer<Dtype>(param)) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual inline const char* type() const { return "MultiSoftmaxWithLoss"; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+//  virtual Dtype Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+//      vector<Blob<Dtype>*>* top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+//  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+//     const bool propagate_down, const vector<Blob<Dtype>*>& bottom);
+
+  shared_ptr<MultiSoftmaxLayer<Dtype> > softmax_layer_;
+  // prob stores the output probability of the layer.
+  Blob<Dtype> prob_;
+  // Vector holders to call the underlying softmax layer forward and backward.
+  vector<Blob<Dtype>*> softmax_bottom_vec_;
+  vector<Blob<Dtype>*> softmax_top_vec_;
+  Blob<Dtype> diff_;  // cached for backward pass
+};
+
+
 }  // namespace caffe
 
 #endif  // CAFFE_LOSS_LAYERS_HPP_
