@@ -418,6 +418,30 @@ class PoolingLayer : public Layer<Dtype> {
   Blob<int> max_idx_;
 };
 
+/*reshape layer (wxl/rg)
+ */
+template <typename Dtype>
+class ReshapeLayer : public Layer<Dtype> {
+  public:
+    explicit ReshapeLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+    virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+        vector<Blob<Dtype>*>& top);
+    virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+        const vector<Blob<Dtype>*>& top);
+
+    virtual inline const char* type() const { return "Reshape"; }
+  protected:
+    virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+        const vector<Blob<Dtype>*>& top);
+    //  virtual Dtype Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+    //      vector<Blob<Dtype>*>* top);
+    virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+        const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+    //  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+    //      const bool propagate_down, vector<Blob<Dtype>*>* bottom);
+};
+
 #ifdef USE_CUDNN
 /*
  * @brief cuDNN implementation of PoolingLayer.
