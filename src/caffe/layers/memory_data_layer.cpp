@@ -45,7 +45,10 @@ void MemoryDataLayer<Dtype>::AddDatumVector(const vector<Datum>& datum_vector) {
   // Copy Labels
   Dtype* top_label = added_label_.mutable_cpu_data();
   for (int item_id = 0; item_id < num; ++item_id) {
-    top_label[item_id] = datum_vector[item_id].label();
+    int label_size = datum_vector[item_id].label().size();
+    for (int i = 0; i < label_size; i++) {
+      top_label[item_id * label_size  + i] = datum_vector[item_id].label().Get(i);
+    }
   }
   // num_images == batch_size_
   Dtype* top_data = added_data_.mutable_cpu_data();

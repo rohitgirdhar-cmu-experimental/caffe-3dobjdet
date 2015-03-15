@@ -144,7 +144,10 @@ void DataLayer<Dtype>::InternalThreadEntry() {
       this->data_transformer_->Transform(datum, &(this->transformed_data_));
     }
     if (this->output_labels_) {
-      top_label[item_id] = datum.label();
+      int label_size = datum.label().size();
+      for (int i = 0; i < label_size; i++) {
+        top_label[item_id * label_size + i] = datum.label().Get(i);
+      }
     }
     trans_time += timer.MicroSeconds();
     // go to the next iter
