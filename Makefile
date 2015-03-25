@@ -234,7 +234,12 @@ ifeq ($(LINUX), 1)
 	endif
 	# boost::thread is reasonably called boost_thread (compare OS X)
 	# We will also explicitly add stdc++ to the link target.
-	LIBRARIES += boost_thread-mt stdc++
+	HOST=$(shell hostname)
+	ifeq (${HOST},"compute-0-5")
+		LIBRARIES += boost_thread-mt stdc++
+	else
+		LIBRARIES += boost_thread stdc++
+	endif
 endif
 
 # OS X:

@@ -78,6 +78,7 @@ class BasePrefetchingDataLayer :
  protected:
   Blob<Dtype> prefetch_data_;
   Blob<Dtype> prefetch_label_;
+  Blob<Dtype> prefetch_label2_;
   Blob<Dtype> transformed_data_;
 };
 
@@ -264,6 +265,27 @@ class ImageDataMultiLabelLayer : public BasePrefetchingDataLayer<Dtype> {
   int lines_id_;
 };
 
+template <typename Dtype>
+class ImageDataMultiLabel2Layer : public BasePrefetchingDataLayer<Dtype> {
+ public:
+  explicit ImageDataMultiLabel2Layer(const LayerParameter& param)
+      : BasePrefetchingDataLayer<Dtype>(param) {}
+  virtual ~ImageDataMultiLabel2Layer();
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "ImageDataMultiLabel2"; }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int ExactNumTopBlobs() const { return 3; }
+
+ protected:
+  shared_ptr<Caffe::RNG> prefetch_rng_;
+  virtual void ShuffleImages();
+  virtual void InternalThreadEntry();
+
+  vector<std::pair<std::string, vector<float> > > lines_;
+  int lines_id_;
+};
 
 /**
  * @brief Provides data to the Net from memory.
