@@ -56,8 +56,8 @@ template <typename Dtype>
 class BasePrefetchingDataLayer :
     public BaseDataLayer<Dtype>, public InternalThread {
  public:
-  explicit BasePrefetchingDataLayer(const LayerParameter& param)
-      : BaseDataLayer<Dtype>(param) {}
+  explicit BasePrefetchingDataLayer(const LayerParameter& param, bool _bilabel = false)
+      : BaseDataLayer<Dtype>(param), bilabel(_bilabel) {}
   virtual ~BasePrefetchingDataLayer() {}
   // LayerSetUp: implements common data layer setup functionality, and calls
   // DataLayerSetUp to do special data layer setup for individual layer types.
@@ -80,6 +80,7 @@ class BasePrefetchingDataLayer :
   Blob<Dtype> prefetch_label_;
   Blob<Dtype> prefetch_label2_;
   Blob<Dtype> transformed_data_;
+  bool bilabel;
 };
 
 template <typename Dtype>
@@ -269,7 +270,7 @@ template <typename Dtype>
 class ImageDataMultiLabel2Layer : public BasePrefetchingDataLayer<Dtype> {
  public:
   explicit ImageDataMultiLabel2Layer(const LayerParameter& param)
-      : BasePrefetchingDataLayer<Dtype>(param) {}
+      : BasePrefetchingDataLayer<Dtype>(param, /* bilabel= */ true) {}
   virtual ~ImageDataMultiLabel2Layer();
   virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
@@ -378,14 +379,14 @@ template <typename Dtype>
 class StructWindowDataLayer : public BasePrefetchingDataLayer<Dtype> {
  public:
   explicit StructWindowDataLayer(const LayerParameter& param)
-      : BasePrefetchingDataLayer<Dtype>(param) {}
+      : BasePrefetchingDataLayer<Dtype>(param, /* bilabel = */ true) {}
   virtual ~StructWindowDataLayer();
   virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
   virtual inline const char* type() const { return "StructWindowData"; }
   virtual inline int ExactNumBottomBlobs() const { return 0; }
-  virtual inline int ExactNumTopBlobs() const { return 2; }
+  virtual inline int ExactNumTopBlobs() const { return 3; }
 
  protected:
   virtual unsigned int PrefetchRand();

@@ -34,9 +34,21 @@ std::vector<std::string> &strsplit(const std::string &s, char delim, std::vector
   return elems;
 }
 
+std::string correctName(const std::string& fpath) {
+  std::vector<std::string> parts;
+  strsplit(fpath, '/', parts);
+  std::string part = parts[parts.size() - 1];
+  part[part.length() - 1] = 't';
+  part[part.length() - 2] = 'x';
+  part[part.length() - 3] = 't';
+  return part;
+}
+
 void readNormals(const std::string& impath, const std::string& root_folder, cv::Mat& output) {
-  std::string fpath = root_folder + "/" + impath, line;
+  std::string im2 = correctName(impath); 
+  std::string fpath = root_folder + "/" + im2, line;
   std::ifstream fin(fpath.c_str());
+  CHECK(fin.is_open()) << "Unable to open normals file " << fpath;
   int lno = 0;
   while (std::getline(fin, line)) {
     std::vector<std::string> elts;
@@ -51,6 +63,36 @@ void readNormals(const std::string& impath, const std::string& root_folder, cv::
     lno++;
   }
   fin.close();
+}
+
+template<typename Dtype>
+void quantizeNormals(const cv::Mat& cropped_normals_orig, 
+    const std::vector<float> codebook[], Dtype* top2_label,
+    int item_id, int label_height = 20, int label_width = 20) {
+  cv::Mat cropped_normals;
+  cv::resize(cropped_normals_orig, cropped_normals,
+      cv::Size(label_height, label_width));
+  for(int h = 0; h < label_height; h++) {
+    for(int w = 0; w < label_width; w++) {
+      float c1 = cropped_normals.at<cv::Vec3f>(h,w)[0];
+      float c2 = cropped_normals.at<cv::Vec3f>(h,w)[1];
+      float c3 = cropped_normals.at<cv::Vec3f>(h,w)[2];
+      float maxNum = -1e6;
+      int maxId = -1;
+      for(int b = 0; b < codebook[0].size(); b++) {
+        float tnum = 0;
+        for(int c = 0; c < 3; c ++)
+          tnum += cropped_normals.at<cv::Vec3f>(h,w)[c] * codebook[c][b];
+        if(tnum > maxNum) {
+          maxNum = tnum;
+          maxId = b;
+        }
+      }
+      CHECK(maxId >= 0);
+      // easy for matlab post-processing
+      top2_label[item_id * label_height * label_width + w * label_height + h] = maxId + 1;
+    }
+  }
 }
 
 namespace caffe {
@@ -231,7 +273,7 @@ void StructWindowDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bo
   this->prefetch_label_.Reshape(label_shape);
 
   vector<int> label2_shape;
-  label2_shape.push_back(1);
+  label2_shape.push_back(batch_size);
   label2_shape.push_back(20 * 20);
   top[2]->Reshape(label2_shape);
   this->prefetch_label2_.Reshape(label2_shape);
@@ -352,6 +394,7 @@ void StructWindowDataLayer<Dtype>::InternalThreadEntry() {
       }
       cv::Mat cv_normals(cv_img.rows, cv_img.cols, CV_32FC3);
       readNormals(image.first, sn_root_folder, cv_normals);
+      LOG(INFO) << "read normals " << image.first;
 
       read_time += timer.MicroSeconds();
       timer.Start();
@@ -450,8 +493,8 @@ void StructWindowDataLayer<Dtype>::InternalThreadEntry() {
       cv::Mat cv_cropped_img = cv_img(roi);
       cv::resize(cv_cropped_img, cv_cropped_img,
           cv_crop_size, 0, 0, cv::INTER_LINEAR);
-      cv::Mat cv_cropped_normals = cv_normals(roi);
-
+      cv::Mat cv_cropped_normals_full = cv_normals(roi);
+      quantizeNormals(cv_cropped_normals_full, codebook, top2_label, item_id);
 
       // horizontal flip at random
       if (do_mirror) {

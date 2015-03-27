@@ -93,7 +93,7 @@ void ImageDataMultiLabel2Layer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>
   // label
   vector<int> label_shape(2, 0);
   label_shape[0] = batch_size;
-  label_shape[1] = lines_[0].second.size() - 1;
+  label_shape[1] = lines_[0].second.size() - 1; // cos the 1st label goes into class
   top[1]->Reshape(label_shape);
   this->prefetch_label_.Reshape(label_shape);
   
