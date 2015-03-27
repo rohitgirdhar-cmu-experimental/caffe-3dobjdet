@@ -766,12 +766,12 @@ message WindowDataParameter {
   optional string root_folder = 13 [default = ""];
 
   // added by rg for StructWindowDataLayer
-  // append 3d_root_folder to locate surface normals
-  optional string 3d_root_folder = 14 [default = ""];
+  // append sn_root_folder to locate surface normals
+  optional string sn_root_folder = 14 [default = ""];
   // path to a code file used to quantize the surface normals
   optional string code_file = 15 [default = ""];
   // number of classes used to bin the surface normals
-  optional int nclasses = 16 [default = 20];
+  optional uint32 nclasses = 16 [default = 20];
 }
 
 // DEPRECATED: use LayerParameter.

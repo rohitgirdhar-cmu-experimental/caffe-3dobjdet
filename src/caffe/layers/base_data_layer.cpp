@@ -39,7 +39,9 @@ void BasePrefetchingDataLayer<Dtype>::LayerSetUp(
   this->prefetch_data_.mutable_cpu_data();
   if (this->output_labels_) {
     this->prefetch_label_.mutable_cpu_data();
-    this->prefetch_label2_.mutable_cpu_data();
+    if (this->bilabel) {
+      this->prefetch_label2_.mutable_cpu_data();
+    }
   }
   DLOG(INFO) << "Initializing prefetch";
   this->CreatePrefetchThread();
@@ -73,8 +75,10 @@ void BasePrefetchingDataLayer<Dtype>::Forward_cpu(
   if (this->output_labels_) {
     caffe_copy(prefetch_label_.count(), prefetch_label_.cpu_data(),
                top[1]->mutable_cpu_data());
-    caffe_copy(prefetch_label2_.count(), prefetch_label2_.cpu_data(),
-               top[2]->mutable_cpu_data());
+    if (this->bilabel) {
+      caffe_copy(prefetch_label2_.count(), prefetch_label2_.cpu_data(),
+                 top[2]->mutable_cpu_data());
+    }
   }
   // Start a new prefetch thread
   DLOG(INFO) << "CreatePrefetchThread";

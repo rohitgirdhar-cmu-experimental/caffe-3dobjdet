@@ -6,6 +6,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <sstream>
+#include <fstream>
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -22,6 +24,34 @@
 // caffe.proto > LayerParameter > WindowDataParameter
 //   'source' field specifies the window_file
 //   'crop_size' indicates the desired warped size
+
+std::vector<std::string> &strsplit(const std::string &s, char delim, std::vector<std::string> &elems) {
+  std::stringstream ss(s);
+  std::string item;
+  while (std::getline(ss, item, delim)) {
+    elems.push_back(item);
+  }
+  return elems;
+}
+
+void readNormals(const std::string& impath, const std::string& root_folder, cv::Mat& output) {
+  std::string fpath = root_folder + "/" + impath, line;
+  std::ifstream fin(fpath.c_str());
+  int lno = 0;
+  while (std::getline(fin, line)) {
+    std::vector<std::string> elts;
+    strsplit(line, ' ', elts);
+    for (int i = 0; i < elts.size(); i++) {
+      std::vector<std::string> elts2;
+      strsplit(elts[i], ',', elts2);
+      for (int c = 0; c < elts2.size(); c++) {
+        output.at<cv::Vec3f>(lno, i)[c] = atof(elts2[c].c_str());
+      }
+    }
+    lno++;
+  }
+  fin.close();
+}
 
 namespace caffe {
 
@@ -59,12 +89,12 @@ void StructWindowDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bo
       << this->layer_param_.window_data_param().cache_images() << std::endl
       << "  root_folder: "
       << this->layer_param_.window_data_param().root_folder() << std::endl
-      << "  3d_root_folder: "
-      << this->layer_param_.window_data_param().3d_root_folder() << std::endl
+      << "  sn_root_folder: "
+      << this->layer_param_.window_data_param().sn_root_folder() << std::endl
       << "  code_file : "
-      << this->layer_param_.window_data_param().code_file() << endl
+      << this->layer_param_.window_data_param().code_file() << std::endl
       << "  num_classes : "
-      << this->layer_param_.window_data_param().code_file();
+      << this->layer_param_.window_data_param().nclasses();
 
   cache_images_ = this->layer_param_.window_data_param().cache_images();
   string root_folder = this->layer_param_.window_data_param().root_folder();
@@ -72,6 +102,7 @@ void StructWindowDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bo
   const int nclasses = this->layer_param_.window_data_param().nclasses();
 
   FILE * fid = fopen(code_file.c_str(), "r");
+  CHECK(fid) << "Unable to open vocab file: " << code_file;
   for (int i = 0; i < nclasses; i++) {
     float c[3];
     fscanf(fid, "%f%f%f", &c[0], &c[1], &c[3]);
@@ -199,6 +230,13 @@ void StructWindowDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bo
   top[1]->Reshape(label_shape);
   this->prefetch_label_.Reshape(label_shape);
 
+  vector<int> label2_shape;
+  label2_shape.push_back(1);
+  label2_shape.push_back(20 * 20);
+  top[2]->Reshape(label2_shape);
+  this->prefetch_label2_.Reshape(label2_shape);
+
+
   // data mean
   has_mean_file_ = this->transform_param_.has_mean_file();
   has_mean_values_ = this->transform_param_.mean_value_size() > 0;
@@ -247,6 +285,7 @@ void StructWindowDataLayer<Dtype>::InternalThreadEntry() {
   CPUTimer timer;
   Dtype* top_data = this->prefetch_data_.mutable_cpu_data();
   Dtype* top_label = this->prefetch_label_.mutable_cpu_data();
+  Dtype* top2_label = this->prefetch_label2_.mutable_cpu_data();
   const Dtype scale = this->layer_param_.window_data_param().scale();
   const int batch_size = this->layer_param_.window_data_param().batch_size();
   const int context_pad = this->layer_param_.window_data_param().context_pad();
@@ -254,8 +293,12 @@ void StructWindowDataLayer<Dtype>::InternalThreadEntry() {
   const bool mirror = this->transform_param_.mirror();
   const float fg_fraction =
       this->layer_param_.window_data_param().fg_fraction();
-  const string 3d_root_folder = this->layer_param_.window_data_param().3d_root_folder();
+
+  // added by rg
+  const string sn_root_folder = this->layer_param_.window_data_param().sn_root_folder();
   const string code_file = this->layer_param_.window_data_param().code_file();
+  //const int nclasses = this->layer_param_.window_data_param().nclasses();
+
   Dtype* mean = NULL;
   int mean_off = 0;
   int mean_width = 0;
@@ -307,6 +350,9 @@ void StructWindowDataLayer<Dtype>::InternalThreadEntry() {
           return;
         }
       }
+      cv::Mat cv_normals(cv_img.rows, cv_img.cols, CV_32FC3);
+      readNormals(image.first, sn_root_folder, cv_normals);
+
       read_time += timer.MicroSeconds();
       timer.Start();
       const int channels = cv_img.channels();
@@ -404,9 +450,12 @@ void StructWindowDataLayer<Dtype>::InternalThreadEntry() {
       cv::Mat cv_cropped_img = cv_img(roi);
       cv::resize(cv_cropped_img, cv_cropped_img,
           cv_crop_size, 0, 0, cv::INTER_LINEAR);
+      cv::Mat cv_cropped_normals = cv_normals(roi);
+
 
       // horizontal flip at random
       if (do_mirror) {
+        LOG(FATAL) << "Mirroring not implemented for normals yet";
         cv::flip(cv_cropped_img, cv_cropped_img, 1);
       }
 
