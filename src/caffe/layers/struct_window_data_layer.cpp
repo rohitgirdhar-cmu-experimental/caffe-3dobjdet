@@ -394,7 +394,7 @@ void StructWindowDataLayer<Dtype>::InternalThreadEntry() {
       }
       cv::Mat cv_normals(cv_img.rows, cv_img.cols, CV_32FC3);
       readNormals(image.first, sn_root_folder, cv_normals);
-      LOG(INFO) << "read normals " << image.first;
+//      LOG(INFO) << "read normals " << image.first;
 
       read_time += timer.MicroSeconds();
       timer.Start();
