@@ -8,6 +8,9 @@
 #include <vector>
 #include <sstream>
 #include <fstream>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/serialization/vector.hpp>
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -47,6 +50,20 @@ std::string correctName(const std::string& fpath) {
 void readNormals(const std::string& impath, const std::string& root_folder, cv::Mat& output) {
   std::string im2 = correctName(impath); 
   std::string fpath = root_folder + "/" + im2, line;
+  std::string cache_path = root_folder + "/cache/" + im2 + ".bin";
+
+  // check if the cache exists, else read the txt file
+  std::ifstream ifs(cache_path.c_str(), std::ios::in | std::ios::binary);
+  if (ifs.is_open()) {
+    boost::archive::binary_iarchive ia(ifs);
+    std::vector<float> data;
+    ia >> data;
+    output = cv::Mat(480, 640, CV_32FC3, data.data()); // TODO dont hardcode
+    ifs.close();
+    return;
+  }
+  
+  // else read the txt file and cache as a binary for fast read
   std::ifstream fin(fpath.c_str());
   CHECK(fin.is_open()) << "Unable to open normals file " << fpath;
   int lno = 0;
@@ -63,6 +80,16 @@ void readNormals(const std::string& impath, const std::string& root_folder, cv::
     lno++;
   }
   fin.close();
+  // serialize the Mat and cache for fast access next time
+  std::vector<float> data;
+  data.assign((float*)output.datastart, (float*)output.dataend); 
+  std::ofstream ofs(cache_path.c_str(), std::ios::out | std::ios::binary);
+  if (! ofs.is_open()) {
+    LOG(ERROR) << "Unable to cache features at " << cache_path;
+  }
+  boost::archive::binary_oarchive oa(ofs);
+  oa << data;
+  ofs.close();
 }
 
 template<typename Dtype>
@@ -74,9 +101,9 @@ void quantizeNormals(const cv::Mat& cropped_normals_orig,
       cv::Size(label_height, label_width));
   for(int h = 0; h < label_height; h++) {
     for(int w = 0; w < label_width; w++) {
-      float c1 = cropped_normals.at<cv::Vec3f>(h,w)[0];
-      float c2 = cropped_normals.at<cv::Vec3f>(h,w)[1];
-      float c3 = cropped_normals.at<cv::Vec3f>(h,w)[2];
+//      float c1 = cropped_normals.at<cv::Vec3f>(h,w)[0];
+//      float c2 = cropped_normals.at<cv::Vec3f>(h,w)[1];
+//      float c3 = cropped_normals.at<cv::Vec3f>(h,w)[2];
       float maxNum = -1e6;
       int maxId = -1;
       for(int b = 0; b < codebook[0].size(); b++) {
