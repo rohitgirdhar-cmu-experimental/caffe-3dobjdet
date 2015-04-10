@@ -91,7 +91,7 @@ void MultiSoftmaxWithLossLayer<Dtype>::Backward_cpu(
 	// Scale down gradient
 	LossParameter loss_param = this->layer_param_.loss_param();
 	caffe_scal(prob_.count(), Dtype(loss_param.scale()), bottom_diff);
-	caffe_scal(prob_.count(), Dtype(1) / num, bottom_diff);
+	caffe_scal(prob_.count(), Dtype(1) / (num * 1000), bottom_diff);
 }
 
 INSTANTIATE_CLASS(MultiSoftmaxWithLossLayer);
